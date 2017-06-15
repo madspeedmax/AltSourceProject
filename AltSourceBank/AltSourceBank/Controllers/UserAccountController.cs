@@ -1,36 +1,41 @@
 ﻿using AltSourceBank.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.Caching;
 using System.Web.Mvc;
 using System.Web.Security;
+using BankApi.Services;
 
 namespace AltSourceBank.Controllers
 {
     public class UserAccountController : Controller
     {
+        private UserAccountService _UserService = new BankApi.Services.UserAccountService();
+
         // GET: UserAccount
         public ActionResult Index()
         {
-            return View();
+            return RedirectToAction("Login", "UserAccount");
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public ActionResult Login()
         {
+            if (System.Web.HttpContext.Current.User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Accounts", "BankAccount");
+            }
             return View();
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Login(LoginViewModel model)
         {
             if (ModelState.IsValid)
             {
-                if (UserList.Users.Any(b => b.Email == model.Email && b.Password == model.Password))
+                if (_UserService.ValidateLogin(model.Email, model.Password))
                 {
-                    FormsAuthentication.SetAuthCookie(model.Email, true);
+                    FormsAuthentication.SetAuthCookie(model.Email, false);
+                    return RedirectToAction("Accounts", "BankAccount");
                 }
                 else
                 {
@@ -40,6 +45,13 @@ namespace AltSourceBank.Controllers
 
             // If we got this far, something failed, redisplay form
             return View(model);
+        }
+
+        [HttpPost]
+        public ActionResult Logout()
+        {
+            FormsAuthentication.SignOut();
+            return RedirectToAction("Login");
         }
 
         [AllowAnonymous]
@@ -55,9 +67,19 @@ namespace AltSourceBank.Controllers
         {
             if (ModelState.IsValid)
             {
-                var user = new UserAccount() { Email = model.Email, Password = model.Password };
-                UserList.Users.Add(user);
-                return RedirectToAction("Index", "Home");
+                //make sure email/username is unique
+                if (!_UserService.IsUsernameUnique(model.Email))
+                {
+                    ModelState.AddModelError("", "There is already an account with that email.");
+                    return View(model);
+                }
+
+                var user = new BankApi.Models.UserAccount() { Email = model.Email, Password = model.Password };
+
+                if (_UserService.Create(user))
+                {
+                    return RedirectToAction("Index", "Home");
+                } 
             }
 
             // If we got this far, something failed, redisplay form

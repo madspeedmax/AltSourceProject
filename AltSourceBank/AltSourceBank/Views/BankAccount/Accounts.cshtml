@@ -1,0 +1,31 @@
+﻿@model IEnumerable<BankApi.Models.BankAccount>
+
+@{
+    ViewBag.Title = "Accounts";
+}
+
+<h2>Accounts</h2>
+
+<p>
+    @Html.ActionLink("Create New", "Create")
+</p>
+<table class="table">
+    <tr>
+        <th>Type</th>
+        <th>Balance</th>
+        <th>Options</th>
+    </tr>
+
+@foreach (var item in Model) {
+    <tr>
+        <td>@item.AccountType</td>
+        <td>@String.Format("{0:C}", item.Balance)</td>
+        <td>
+            @Html.ActionLink("Deposit", "Deposit", "Transaction", new { accountId = item.AccountId }, null) |
+            @Html.ActionLink("Withdraw", "Withdraw", "Transaction", new { accountId = item.AccountId }, null) |
+            @Html.ActionLink("Transactions", "Transactions", "Transaction", new { accountId = item.AccountId }, null)
+        </td>
+    </tr>
+}
+
+</table>
